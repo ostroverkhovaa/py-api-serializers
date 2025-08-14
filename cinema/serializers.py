@@ -10,9 +10,14 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class ActorSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Actor
         fields = ("id", "first_name", "last_name", "full_name")
+
+    def get_full_name(self, obj: Actor) -> str:
+        return obj.full_name
 
 
 class CinemaHallSerializer(serializers.ModelSerializer):
@@ -40,14 +45,17 @@ class MovieListSerializer(MovieSerializer):
         read_only=True,
         slug_field="name",
     )
-    actors = serializers.SlugRelatedField(
-        many=True,
-        read_only=True,
-        slug_field="full_name",
-    )
+    actors = serializers.SerializerMethodField()
+
+    def get_actors(self, obj: Actor) -> list[str]:
+        return [
+            (f"{actor.first_name} "
+             f"{actor.last_name}")
+            for actor in obj.actors.all()
+        ]
 
 
-class MovieRetriesSerializer(MovieSerializer):
+class MovieRetrieveSerializer(MovieSerializer):
     genres = GenreSerializer(many=True, read_only=True)
     actors = ActorSerializer(many=True, read_only=True)
 
@@ -64,8 +72,14 @@ class MovieSessionSerializer(serializers.ModelSerializer):
 
 
 class MovieSessionListSerializer(serializers.ModelSerializer):
-    movie_title = serializers.CharField(source="movie.title", read_only=True)
-    cinema_hall_name = serializers.CharField(source="cinema_hall.name", read_only=True)
+    movie_title = serializers.CharField(
+        source="movie.title",
+        read_only=True
+    )
+    cinema_hall_name = serializers.CharField(
+        source="cinema_hall.name",
+        read_only=True
+    )
     cinema_hall_capacity = serializers.IntegerField(
         source="cinema_hall.capacity",
         read_only=True
@@ -82,6 +96,6 @@ class MovieSessionListSerializer(serializers.ModelSerializer):
         )
 
 
-class MovieSessionRetriesSerializer(MovieSessionSerializer):
+class MovieSessionRetrieveSerializer(MovieSessionSerializer):
     movie = MovieListSerializer(many=False, read_only=True)
     cinema_hall = CinemaHallSerializer(many=False, read_only=True)
